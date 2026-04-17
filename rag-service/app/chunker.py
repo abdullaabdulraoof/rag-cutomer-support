@@ -2,7 +2,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def chunk_documents(docs):
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
+        chunk_size=150,
         chunk_overlap=50
     )
 

@@ -12,7 +12,7 @@ def get_answer(query, index, chunks):
     query_embedding = model.encode([query])
     query_embedding = np.array(query_embedding).astype("float32")
 
-    D, I = index.search(query_embedding, k=3)
+    D, I = index.search(query_embedding, k=2)
 
     retrieved_chunks = []
 
@@ -25,14 +25,14 @@ def get_answer(query, index, chunks):
     sources = [c.metadata["source"] for c in retrieved_chunks]
 
     prompt = f"""
-    Answer the question using the context below.
+Use the context to answer briefly.
 
-    Context:
-    {context}
+Context:
+{context}
 
-    Question:
-    {query}
-    """
+Question:
+{query}
+"""
 
     response = ollama.chat(
         model="llama3",
@@ -44,7 +44,7 @@ def get_answer(query, index, chunks):
     query_embedding = model.encode([query])
     query_embedding = np.array(query_embedding).astype("float32")
 
-    D, I = index.search(query_embedding, k=3)
+    D, I = index.search(query_embedding, k=2)
 
     retrieved_chunks = []
     for i in I[0]:
@@ -54,14 +54,14 @@ def get_answer(query, index, chunks):
     context = "\n".join([c.page_content for c in retrieved_chunks])
 
     prompt = f"""
-    Answer the question using the context below.
+Use the context to answer briefly.
 
-    Context:
-    {context}
+Context:
+{context}
 
-    Question:
-    {query}
-    """
+Question:
+{query}
+"""
 
     response = ollama.chat(
         model="llama3",
