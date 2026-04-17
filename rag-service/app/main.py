@@ -1,33 +1,40 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+
 from app.loader import load_documents
 from app.chunker import chunk_documents
 from app.embedder import create_embeddings
 from app.vectorstore import create_faiss_index
-from app.rag_pipeline import query_rag
+from app.rag_pipeline import get_answer
 
-# Load docs
+app = FastAPI()
+
+# -------------------------
+# Load everything ONCE
+# -------------------------
 docs = load_documents("../data")
-
-print("Loaded docs:", len(docs))
-
-# Chunk
 chunks = chunk_documents(docs)
-print("Chunks:", len(chunks))
-
-# Embeddings
 embeddings = create_embeddings(chunks)
-
-# Vector DB
 index = create_faiss_index(embeddings)
 
-print("RAG Ready 🚀")
+print("RAG API Ready 🚀")
 
-# CLI loop
-while True:
-    query = input("\nAsk: ")
 
-    if query.lower() == "exit":
-        break
+# -------------------------
+# Request Schema
+# -------------------------
+class QueryRequest(BaseModel):
+    question: str
 
-    answer, sources = query_rag(query, index, chunks)
 
-    print("\nAnswer:\n", answer)
+# -------------------------
+# API Endpoint
+# -------------------------
+@app.post("/ask")
+def ask_question(request: QueryRequest):
+    answer, sources = get_answer(request.question, index, chunks)
+
+    return {
+        "answer": answer,
+        "sources": sources
+    }
