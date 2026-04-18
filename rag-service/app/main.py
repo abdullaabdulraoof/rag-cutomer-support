@@ -1,25 +1,40 @@
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+import ollama
 
-from app.rag_pipeline import get_answer
 from app.vectorstore import load_vectorstore
-from app.embedder import model
+from app.rag_pipeline import get_answer
 
 app = FastAPI()
 
-# Load FAISS once
 index, docs = load_vectorstore()
 
 class Query(BaseModel):
     question: str
 
 
-@app.post("/ask")
-def ask(query: Query):
-    answer, sources = get_answer(query.question, index, docs)
+@app.post("/ask-stream")
+def ask_stream(query: Query):
 
-    return {
-        "question": query.question,
-        "answer": answer,
-        "sources": sources
-    }
+    def generate():
+
+        prompt = f"""
+Answer the question clearly.
+
+Question:
+{query.question}
+"""
+
+        # 🔥 STREAM from Ollama
+        stream = ollama.chat(
+            model="llama3",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True
+        )
+
+        for chunk in stream:
+            content = chunk["message"]["content"]
+            yield content
+
+    return StreamingResponse(generate(), media_type="text/plain")
