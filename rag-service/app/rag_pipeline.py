@@ -1,29 +1,29 @@
 import numpy as np
 import ollama
-
 from app.embedder import model
 
-def get_answer(query, index, chunks):
-    
-    import numpy as np
-    import ollama
-    from app.embedder import model
 
+def get_answer(query, index, docs):
+
+    # 🔹 Convert query to embedding
     query_embedding = model.encode([query])
     query_embedding = np.array(query_embedding).astype("float32")
 
+    # 🔹 Search FAISS
     D, I = index.search(query_embedding, k=2)
 
-    retrieved_chunks = []
+    retrieved_texts = []
+    sources = []
 
     for i in I[0]:
         if i != -1:
-            retrieved_chunks.append(chunks[i])
+            retrieved_texts.append(docs[i]["text"])
+            sources.append(docs[i]["source"])
 
-    context = "\n".join([c.page_content for c in retrieved_chunks])
+    # 🔹 Build context
+    context = "\n".join(retrieved_texts)
 
-    sources = [c.metadata["source"] for c in retrieved_chunks]
-
+    # 🔹 Prompt
     prompt = f"""
 Use the context to answer briefly.
 
@@ -34,38 +34,12 @@ Question:
 {query}
 """
 
+    # 🔹 LLM call
     response = ollama.chat(
         model="llama3",
         messages=[{"role": "user", "content": prompt}]
     )
 
-    return response["message"]["content"], list(set(sources))
-    
-    query_embedding = model.encode([query])
-    query_embedding = np.array(query_embedding).astype("float32")
+    answer = response["message"]["content"]
 
-    D, I = index.search(query_embedding, k=2)
-
-    retrieved_chunks = []
-    for i in I[0]:
-        if i != -1:
-            retrieved_chunks.append(chunks[i])
-
-    context = "\n".join([c.page_content for c in retrieved_chunks])
-
-    prompt = f"""
-Use the context to answer briefly.
-
-Context:
-{context}
-
-Question:
-{query}
-"""
-
-    response = ollama.chat(
-        model="llama3",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    return response["message"]["content"], retrieved_chunks
+    return answer, list(set(sources))

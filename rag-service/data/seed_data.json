@@ -1,0 +1,17 @@
+[
+  {
+    "category": "returns",
+    "question": "What is return policy?",
+    "answer": "You can return products within 7 days of delivery."
+  },
+  {
+    "category": "orders",
+    "question": "How can I track my order?",
+    "answer": "You can track your order using the tracking ID."
+  },
+  {
+    "category": "payments",
+    "question": "What payment methods are available?",
+    "answer": "We support UPI, debit cards, and credit cards."
+  }
+]
