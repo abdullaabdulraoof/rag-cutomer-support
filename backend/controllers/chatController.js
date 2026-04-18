@@ -2,13 +2,16 @@ const axios = require("axios");
 
 exports.handleChat = async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, sessionId } = req.body;
 
     const response = await axios({
       method: "post",
       url: "http://127.0.0.1:8000/ask-stream",
-      data: { question },
-      responseType: "stream" // 🔥 IMPORTANT
+      data: {
+        question,
+        session_id: sessionId || "user1",
+      },
+      responseType: "stream",
     });
 
     res.setHeader("Content-Type", "text/plain");
@@ -23,6 +26,6 @@ exports.handleChat = async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Error streaming response");
+    res.status(500).send("Error");
   }
 };

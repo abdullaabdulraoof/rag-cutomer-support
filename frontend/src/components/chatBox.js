@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { gsap } from "gsap";
 
 const ChatBox = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const chatRef = useRef(null);
 
   // 🎤 Voice input
   const startListening = () => {
@@ -23,13 +26,28 @@ const ChatBox = () => {
     window.speechSynthesis.speak(speech);
   };
 
-  // 🚀 Streaming chat
+  // 🔥 Animate messages when added
+  useEffect(() => {
+    if (chatRef.current) {
+      gsap.fromTo(
+        chatRef.current.lastChild,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.4 }
+      );
+    }
+  }, [messages]);
+  useEffect(() => {
+  chatRef.current?.scrollTo({
+    top: chatRef.current.scrollHeight,
+    behavior: "smooth"
+  });
+}, [messages]);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage = input;
 
-    // Add user message
     setMessages((prev) => [...prev, { text: userMessage, sender: "user" }]);
 
     setInput("");
@@ -44,7 +62,10 @@ const ChatBox = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question: userMessage }),
+        body: JSON.stringify({
+          question: userMessage,
+          sessionId: "user1",
+        }),
       });
 
       const reader = response.body.getReader();
@@ -59,7 +80,6 @@ const ChatBox = () => {
         const chunk = decoder.decode(value);
         result += chunk;
 
-        // 🔥 Update last bot message (streaming effect)
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = {
@@ -70,7 +90,7 @@ const ChatBox = () => {
         });
       }
 
-      speak(result); // 🔊 speak response
+      speak(result);
     } catch (error) {
       console.error(error);
     }
@@ -82,16 +102,14 @@ const ChatBox = () => {
     <div className="chat-container">
       <h2>🤖 AI Support Chat</h2>
 
-      <div className="chat-box">
-        {messages.map((msg, i) => (
-          <div key={i} className={msg.sender}>
-            <p style={{ color: msg.sender === "user" ? "blue" : "green" }}>
-              {msg.text}
-            </p>
-          </div>
-        ))}
+      <div className="chat-box" ref={chatRef}>
+       {messages.map((msg, i) => (
+  <div key={i} className={msg.sender === "user" ? "user" : "bot"}>
+  <strong>{msg.sender === "user" ? "You" : "AI"}:</strong> {msg.text}
+</div>
+))}
 
-        {loading && <p style={{ color: "gray" }}>Thinking...</p>}
+        {loading && <div className="typing">AI is typing...</div>}
       </div>
 
       <div className="input-box">
