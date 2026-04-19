@@ -1,17 +1,26 @@
-memory_store = {}
+from app.db import chat_collection
 
-def get_memory(session_id):
-    return memory_store.get(session_id, [])
+def save_chat(session_id, question, answer):
+    chat_collection.update_one(
+        {"session_id": session_id},
+        {
+            "$push": {
+                "messages": {
+                    "$each": [
+                        {"sender": "user", "text": question},
+                        {"sender": "bot", "text": answer}
+                    ]
+                }
+            }
+        },
+        upsert=True
+    )
 
 
-def update_memory(session_id, question, answer):
-    if session_id not in memory_store:
-        memory_store[session_id] = []
+def get_chat(session_id):
+    chat = chat_collection.find_one({"session_id": session_id})
+    return chat["messages"] if chat else []
 
-    memory_store[session_id].append({
-        "question": question,
-        "answer": answer
-    })
 
-    # keep only last 3 chats (important)
-    memory_store[session_id] = memory_store[session_id][-3:]
+def clear_chat(session_id):
+    chat_collection.delete_one({"session_id": session_id})

@@ -1,40 +1,36 @@
-from app.db import collection
-from sentence_transformers import SentenceTransformer
-import faiss
+from app.db import faq_collection
+from app.embedder import model
+from app.vectorstore import create_faiss_index, save_vectorstore
+
 import numpy as np
-import pickle
-import os
 
-# Load model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+def run_ingestion():
+    docs = []
 
-# Fetch data
-docs = []
-for item in collection.find():
-    text = f"Q: {item['question']}\nA: {item['answer']}"
-    docs.append({
-        "text": text,
-        "source": item["category"]
-    })
+    for item in faq_collection.find():
+        text = f"Q: {item['question']}\nA: {item['answer']}"
 
-print("Loaded docs:", len(docs))
+        docs.append({
+            "content": text,
+            "source": item["category"]
+        })
 
-# Convert to embeddings
-texts = [d["text"] for d in docs]
-embeddings = model.encode(texts)
-embeddings = np.array(embeddings).astype("float32")
+    print("Loaded docs:", len(docs))
 
-# Create FAISS index
-dimension = embeddings.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(embeddings)
+    # Convert to embeddings
+    texts = [d["content"] for d in docs]
 
-# Save FAISS
-os.makedirs("vectorstore", exist_ok=True)
-faiss.write_index(index, "vectorstore/faiss_index.bin")
+    embeddings = model.encode(texts)
+    embeddings = np.array(embeddings).astype("float32")
 
-# Save metadata
-with open("vectorstore/metadata.pkl", "wb") as f:
-    pickle.dump(docs, f)
+    # Create index
+    index = create_faiss_index(embeddings)
 
-print("✅ Ingestion complete. FAISS index saved.")
+    # Save
+    save_vectorstore(index, docs)
+
+    print("✅ Ingestion complete")
+    
+
+if __name__ == "__main__":
+    run_ingestion()
