@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
+import axios from "axios";
 
-const ChatBox = () => {
+const ChatBox = ({ sessionId }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,24 +38,44 @@ const ChatBox = () => {
     }
   }, [messages]);
   useEffect(() => {
-  chatRef.current?.scrollTo({
-    top: chatRef.current.scrollHeight,
-    behavior: "smooth"
-  });
-}, [messages]);
+    chatRef.current?.scrollTo({
+      top: chatRef.current.scrollHeight,
+      behavior: "smooth"
+    });
+  }, [messages]);
+
+
+  useEffect(() => {
+    if (!sessionId) return;
+    setMessages([]);
+
+    async function loadHistory() {
+      try {
+        const res = await axios.get(
+          `http://localhost:8000/history/${sessionId}`
+        );
+        setMessages(res.data || []);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadHistory();
+  }, [sessionId]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !sessionId) return;
 
     const userMessage = input;
 
-    setMessages((prev) => [...prev, { text: userMessage, sender: "user" }]);
+    setMessages((prev) => [
+      ...prev,
+      { text: userMessage, sender: "user" },
+      { text: "", sender: "bot" }
+    ]);
 
     setInput("");
     setLoading(true);
-
-    // Add empty AI message
-    setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
     try {
       const response = await fetch("http://localhost:5000/api/chat", {
@@ -64,7 +85,7 @@ const ChatBox = () => {
         },
         body: JSON.stringify({
           question: userMessage,
-          sessionId: "user1",
+          sessionId: sessionId,
         }),
       });
 
@@ -82,32 +103,34 @@ const ChatBox = () => {
 
         setMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1] = {
-            text: result,
-            sender: "bot",
-          };
+          if (updated.length > 0) {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              text: result,
+            };
+          }
           return updated;
         });
       }
 
       speak(result);
+
     } catch (error) {
       console.error(error);
     }
 
     setLoading(false);
   };
-
   return (
     <div className="chat-container">
       <h2>🤖 AI Support Chat</h2>
 
       <div className="chat-box" ref={chatRef}>
-       {messages.map((msg, i) => (
-  <div key={i} className={msg.sender === "user" ? "user" : "bot"}>
-  <strong>{msg.sender === "user" ? "You" : "AI"}:</strong> {msg.text}
-</div>
-))}
+        {messages.map((msg, i) => (
+          <div key={sessionId + "-" + i} className={msg.sender === "user" ? "user" : "bot"}>
+            <strong>{msg.sender === "user" ? "You" : "AI"}:</strong> {msg.text}
+          </div>
+        ))}
 
         {loading && <div className="typing">AI is typing...</div>}
       </div>

@@ -7,9 +7,19 @@ import ollama
 from app.vectorstore import load_vectorstore
 from app.embedder import model
 from app.memory import save_chat, get_chat
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 index, docs = load_vectorstore()
 
 class Query(BaseModel):
